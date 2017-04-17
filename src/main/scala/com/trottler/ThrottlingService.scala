@@ -23,10 +23,11 @@ class ThrottlingService(var graceRps: Int,
   val unauthorized = "Unauthorized"
 
   implicit val timeout = Timeout(1 second)
-  implicit val exec = context.dispatcher
+  private implicit val exec = context.dispatcher
 
   private val cashSla = collection.mutable.Map[String, Sla]()
   private var counters = collection.mutable.Map[String, Int]()
+  private var startTime: Long = System.currentTimeMillis()
 
   def receive: Receive = {
     case IsRequestAllowed(token) =>
@@ -69,8 +70,14 @@ class ThrottlingService(var graceRps: Int,
   }
 
   private def isAllowed(user: String, maxRps: Int): Boolean = {
+
     val count = counters.getOrElse(user, 0)
-    if (count < maxRps) {
+
+    var extraRps = 0
+    if(System.currentTimeMillis() - startTime < 100 && count >= maxRps)
+      extraRps = maxRps/10
+
+    if (count < maxRps + extraRps) {
       log.debug(s"User $user, count " + (count + 1))
       counters.put(user, count + 1)
       log.debug(s"Request allowed")
@@ -82,6 +89,8 @@ class ThrottlingService(var graceRps: Int,
     }
   }
 
-  private def resetCounters() =
+  private def resetCounters() = {
     counters = collection.mutable.Map(counters.keySet.map(k => (k, 0)).toSeq: _*)
+    startTime = System.currentTimeMillis()
+  }
 }

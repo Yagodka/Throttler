@@ -1,5 +1,4 @@
 
-
 ## Start service:
   `sbt run`
 
