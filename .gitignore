@@ -1,0 +1,6 @@
+.gitignore
+.idea/
+project/project/
+project/target/
+!project/target/gatling
+src/main/resources/todo.txt
